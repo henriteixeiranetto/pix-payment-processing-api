@@ -1,0 +1,59 @@
+# Requisições de exemplo. Funcionam no IntelliJ (HTTP Client) e no VS Code (extensão REST Client).
+# Suba a aplicação antes: ./mvnw spring-boot:run
+
+@base = http://localhost:8080
+@txid = pedido20261106000000000000001
+
+### Criar cobrança com txid gerado pelo sistema
+POST {{base}}/cob
+Content-Type: application/json
+
+{
+  "calendario": { "expiracao": 3600 },
+  "devedor": { "cpf": "12345678909", "nome": "Francisco da Silva" },
+  "valor": { "original": "123.45" },
+  "chave": "7d9f0335-8dcc-4054-9bf9-0dbd61d36906",
+  "solicitacaoPagador": "Cobrança dos serviços prestados."
+}
+
+### Criar cobrança com txid escolhido pelo cliente (repita para ver a idempotência: 201 e depois 200)
+PUT {{base}}/cob/{{txid}}
+Content-Type: application/json
+
+{
+  "calendario": { "expiracao": 3600 },
+  "devedor": { "cnpj": "12ABC34501DE35", "nome": "Empresa de Serviços SA" },
+  "valor": { "original": "567.89" },
+  "chave": "financeiro@example.com"
+}
+
+### Consultar cobrança
+GET {{base}}/cob/{{txid}}
+
+### Revisar valor e mensagem (a revisão sobe para 1)
+PATCH {{base}}/cob/{{txid}}
+Content-Type: application/json
+
+{
+  "valor": { "original": "500.00" },
+  "solicitacaoPagador": "Desconto aplicado."
+}
+
+### Cancelar cobrança
+PATCH {{base}}/cob/{{txid}}
+Content-Type: application/json
+
+{ "status": "REMOVIDA_PELO_USUARIO_RECEBEDOR" }
+
+### Listar cobranças criadas em um período (filtros opcionais: cpf, cnpj, status)
+GET {{base}}/cob?inicio=2026-01-01T00:00:00Z&fim=2026-12-31T23:59:59Z&paginacao.itensPorPagina=10
+
+### Exemplo de erro: valor fora do formato e chave Pix inválida
+POST {{base}}/cob
+Content-Type: application/json
+
+{
+  "calendario": {},
+  "valor": { "original": "10" },
+  "chave": "nao-e-uma-chave"
+}

@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: pix-payment-processing-api
+  threads:
+    virtual:
+      # Cada requisição HTTP roda em uma virtual thread. Desde o Java 24 (JEP 491) elas não ficam
+      # presas em blocos synchronized: esperar o banco ou a rede não ocupa uma thread do sistema.
+      enabled: true
+  # Valores para desenvolvimento local. Em outros ambientes, sobrescreva com as
+  # variáveis SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME e SPRING_DATASOURCE_PASSWORD.
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cobrancas
+    username: cobrancas
+    password: cobrancas
+  jpa:
+    open-in-view: false
+    hibernate:
+      # O schema é criado pelo Flyway; o Hibernate só confere se as entidades batem com ele.
+      ddl-auto: validate
+  docker:
+    compose:
+      # Mantém o PostgreSQL rodando entre reinícios da aplicação.
+      lifecycle-management: start-only
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+# Dados usados para montar o "Pix Copia e Cola" (BR Code) de cada cobrança.
+pix:
+  recebedor:
+    nome: Loja Exemplo LTDA
+    cidade: Sao Paulo
+  # Endereço onde o payload da cobrança seria publicado (QR Code dinâmico).
+  # example.com é um domínio reservado para exemplos: este ambiente é simulado.
+  location-base: pix.example.com/qr/v2

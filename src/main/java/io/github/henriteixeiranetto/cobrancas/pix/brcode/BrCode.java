@@ -5,13 +5,8 @@ import java.math.RoundingMode;
 import java.text.Normalizer;
 
 /**
- * Gera o "Pix Copia e Cola" (BR Code): o texto que vai dentro do QR Code do Pix.
- *
- * <p>O BR Code segue o padrão EMV QRCPS-MPM. Ele é uma sequência de campos no formato TLV:
- * ID com 2 dígitos + tamanho com 2 dígitos + valor. Exemplo: {@code 5802BR} é o campo 58
- * (país), com 2 caracteres, valendo "BR". O último campo (63) é um CRC16 de todo o texto.
- *
- * <p>Referência: Manual de Padrões para Iniciação do Pix, do Banco Central do Brasil.
+ * Monta o Pix Copia e Cola (BR Code) no padrão EMV: campos ID + tamanho + valor, com CRC16
+ * no final. Referência: Manual de Padrões para Iniciação do Pix (BCB).
  */
 public final class BrCode {
 
@@ -24,17 +19,14 @@ public final class BrCode {
     private BrCode() {
     }
 
-    /**
-     * BR Code de QR Code dinâmico, usado nas cobranças imediatas: em vez de levar os dados
-     * da cobrança, leva a URL (location) onde o aplicativo do pagador busca esses dados.
-     */
+    /** QR dinâmico (cob): leva a URL do payload, não os dados da cobrança. */
     public static String dinamico(String location, String nomeRecebedor, String cidadeRecebedor) {
         String contaPix = campo("00", GUI_PIX) + campo("25", location);
         return montar(QR_DE_USO_UNICO, contaPix, null, nomeRecebedor, cidadeRecebedor, SEM_TXID);
     }
 
     /**
-     * BR Code de QR Code estático: leva a própria chave Pix e, opcionalmente, valor e txid.
+     * QR estático: leva a chave e, se informados, valor e txid.
      *
      * @param valor opcional; quando nulo, o pagador digita o valor no aplicativo
      * @param txid  opcional (até 25 caracteres); quando nulo, usa "***"
@@ -61,7 +53,7 @@ public final class BrCode {
                 .append(campo("59", normalizar(nome, TAMANHO_MAXIMO_NOME)))
                 .append(campo("60", normalizar(cidade, TAMANHO_MAXIMO_CIDADE)))
                 .append(campo("62", campo("05", txid)))
-                .append("6304"); // o CRC é calculado incluindo o ID e o tamanho do próprio campo 63
+                .append("6304"); // o CRC inclui o próprio "6304"
         return payload.append(Crc16.calcular(payload.toString())).toString();
     }
 
@@ -72,7 +64,7 @@ public final class BrCode {
         return id + "%02d".formatted(valor.length()) + valor;
     }
 
-    /** Remove acentos e símbolos (o BR Code aceita apenas caracteres simples) e corta no tamanho máximo. */
+    /** Sem acentos nem símbolos (o BR Code não aceita), cortado no tamanho máximo. */
     static String normalizar(String texto, int tamanhoMaximo) {
         String semAcentos = Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         String simples = semAcentos.replaceAll("[^A-Za-z0-9 .\\-]", "").replaceAll("\\s+", " ").trim();

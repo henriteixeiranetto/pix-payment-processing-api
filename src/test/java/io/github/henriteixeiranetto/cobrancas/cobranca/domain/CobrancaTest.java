@@ -7,6 +7,7 @@ import io.github.henriteixeiranetto.cobrancas.pix.ChavePix;
 import io.github.henriteixeiranetto.cobrancas.shared.domain.RegraDeNegocioException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class CobrancaTest {
@@ -27,19 +28,19 @@ class CobrancaTest {
     void substituirPelosMesmosDadosNaoAlteraNada() {
         Cobranca cobranca = novaCobranca();
 
-        boolean alterou = cobranca.substituirDados(dados("100.00"));
+        List<String> alterados = cobranca.substituirDados(dados("100.00"));
 
-        assertThat(alterou).isFalse();
+        assertThat(alterados).isEmpty();
         assertThat(cobranca.revisao()).isZero();
     }
 
     @Test
-    void substituirPorDadosDiferentesIncrementaARevisao() {
+    void substituirPorDadosDiferentesIncrementaARevisaoEInformaOQueMudou() {
         Cobranca cobranca = novaCobranca();
 
-        boolean alterou = cobranca.substituirDados(dados("150.00"));
+        List<String> alterados = cobranca.substituirDados(dados("150.00"));
 
-        assertThat(alterou).isTrue();
+        assertThat(alterados).containsExactly("valor.original");
         assertThat(cobranca.revisao()).isEqualTo(1);
         assertThat(cobranca.dados().valorOriginal()).isEqualByComparingTo("150.00");
     }
@@ -48,8 +49,9 @@ class CobrancaTest {
     void revisarAlteraApenasOsCamposInformados() {
         Cobranca cobranca = novaCobranca();
 
-        cobranca.revisar(revisaoDoValor("80.00"));
+        List<String> alterados = cobranca.revisar(revisaoDoValor("80.00"));
 
+        assertThat(alterados).containsExactly("valor.original");
         assertThat(cobranca.revisao()).isEqualTo(1);
         assertThat(cobranca.dados().valorOriginal()).isEqualByComparingTo("80.00");
         assertThat(cobranca.dados().devedor()).isEqualTo(DEVEDOR);
@@ -60,8 +62,9 @@ class CobrancaTest {
     void revisaoQueNaoMudaNadaNaoIncrementaARevisao() {
         Cobranca cobranca = novaCobranca();
 
-        cobranca.revisar(revisaoDoValor("100.00"));
+        List<String> alterados = cobranca.revisar(revisaoDoValor("100.00"));
 
+        assertThat(alterados).isEmpty();
         assertThat(cobranca.revisao()).isZero();
     }
 
@@ -69,8 +72,9 @@ class CobrancaTest {
     void removerMudaOStatusEIncrementaARevisao() {
         Cobranca cobranca = novaCobranca();
 
-        cobranca.revisar(remocao());
+        List<String> alterados = cobranca.revisar(remocao());
 
+        assertThat(alterados).containsExactly("status");
         assertThat(cobranca.status()).isEqualTo(StatusCobranca.REMOVIDA_PELO_USUARIO_RECEBEDOR);
         assertThat(cobranca.revisao()).isEqualTo(1);
     }
@@ -104,6 +108,29 @@ class CobrancaTest {
 
         assertThat(cobranca.estaExpirada(AGORA.plusSeconds(3599))).isFalse();
         assertThat(cobranca.estaExpirada(AGORA.plusSeconds(3600))).isTrue();
+    }
+
+    @Test
+    void naRevisaoMostraACobrancaComoEraNaquelaRevisao() {
+        Cobranca cobranca = novaCobranca();
+        RegistroDeRevisao revisaoZero = RegistroDeRevisao.de(cobranca, List.of(), AGORA);
+        cobranca.revisar(revisaoDoValor("80.00"));
+
+        Cobranca comoEra = cobranca.naRevisao(revisaoZero);
+
+        assertThat(comoEra.revisao()).isZero();
+        assertThat(comoEra.dados().valorOriginal()).isEqualByComparingTo("100.00");
+        assertThat(comoEra.location()).isEqualTo(cobranca.location());
+        assertThat(cobranca.dados().valorOriginal()).isEqualByComparingTo("80.00"); // a atual não muda
+    }
+
+    @Test
+    void naoAceitaRegistroDeRevisaoDeOutraCobranca() {
+        Cobranca cobranca = novaCobranca();
+        RegistroDeRevisao deOutraCobranca = RegistroDeRevisao.de(novaCobranca(), List.of(), AGORA);
+
+        assertThatThrownBy(() -> cobranca.naRevisao(deOutraCobranca))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static Cobranca novaCobranca() {

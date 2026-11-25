@@ -46,6 +46,15 @@ class DadosCobrancaTest {
     }
 
     @Test
+    void informaQuaisCamposMudaram() {
+        var antes = new DadosCobranca(3600, new BigDecimal("100.00"), CHAVE, null, "Pedido 123");
+        var depois = new DadosCobranca(7200, new BigDecimal("100.00"), CHAVE, null, "Pedido 124");
+
+        assertThat(antes.camposAlteradosEm(depois)).containsExactly("calendario.expiracao", "solicitacaoPagador");
+        assertThat(antes.camposAlteradosEm(antes)).isEmpty();
+    }
+
+    @Test
     void limitaASolicitacaoAoPagadorA140Caracteres() {
         assertThatThrownBy(() -> new DadosCobranca(3600, BigDecimal.TEN, CHAVE, null, "a".repeat(141)))
                 .isInstanceOf(RegraDeNegocioException.class)

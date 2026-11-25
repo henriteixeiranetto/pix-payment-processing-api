@@ -25,11 +25,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
- * Converte exceções em respostas de erro no formato RFC 9457 (application/problem+json),
- * com os mesmos tipos de erro e a lista de {@code violacoes} usados pela API Pix.
- *
- * <p>Estende {@link ResponseEntityExceptionHandler} para também padronizar os erros que o
- * próprio Spring MVC lança (JSON malformado, parâmetro ausente, tipo inválido etc.).
+ * Erros no formato RFC 9457, com os tipos e a lista de violações da API Pix. Estende
+ * ResponseEntityExceptionHandler para padronizar também os erros do próprio Spring MVC.
  */
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
@@ -53,10 +50,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problema(HttpStatus.NOT_FOUND, "CobNaoEncontrado", "Cobrança não encontrada.", ex.getMessage());
     }
 
-    /**
-     * Duas requisições alteraram a mesma cobrança ao mesmo tempo (versão desatualizada), ou duas
-     * tentaram criar o mesmo txid (chave primária duplicada). Repetir a requisição resolve.
-     */
+    /** Lock otimista ou mesmo txid criado ao mesmo tempo. Repetir a requisição resolve. */
     @ExceptionHandler({OptimisticLockingFailureException.class, DataIntegrityViolationException.class})
     ProblemDetail conflito(RuntimeException ex) {
         log.warn("Conflito de concorrência ao gravar cobrança: {}", ex.getMessage());
@@ -118,7 +112,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static ProblemDetail consultaInvalida(List<Violacao> violacoes) {
         ProblemDetail problema = problema(HttpStatus.BAD_REQUEST, "CobConsultaInvalida", "Consulta inválida.",
-                "Os parâmetros de consulta à lista de cobranças não respeitam o schema "
+                "Os parâmetros da consulta de cobranças não respeitam o schema "
                         + "ou não fazem sentido semanticamente.");
         problema.setProperty("violacoes", violacoes);
         return problema;

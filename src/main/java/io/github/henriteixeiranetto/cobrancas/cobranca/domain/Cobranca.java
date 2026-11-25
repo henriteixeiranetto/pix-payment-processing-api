@@ -5,13 +5,11 @@ import static java.util.Objects.requireNonNullElse;
 
 import io.github.henriteixeiranetto.cobrancas.shared.domain.RegraDeNegocioException;
 import java.time.Instant;
+import java.util.List;
 
 /**
- * Cobrança imediata (recurso "cob" da API Pix): um pedido de pagamento com valor definido
- * e prazo de validade, identificado pelo txid.
- *
- * <p>É a raiz do agregado: toda alteração passa por aqui, para que as regras de status e de
- * revisão fiquem em um só lugar e possam ser testadas sem banco de dados nem Spring.
+ * Cobrança imediata ("cob" na API Pix). Raiz do agregado: toda mudança de status
+ * ou de dados passa por aqui.
  */
 public class Cobranca {
 
@@ -47,18 +45,21 @@ public class Cobranca {
     }
 
     /**
-     * Substitui todos os dados da cobrança (PUT /cob/{txid} com um txid que já existe).
-     * Reenviar exatamente os mesmos dados não muda nada: é isso que torna o PUT idempotente.
+     * PUT sobre cobrança existente. Com os mesmos dados nada muda, e é isso que deixa o PUT idempotente.
      *
-     * @return true se algum dado mudou (e a revisão foi incrementada)
+     * @return campos alterados; vazio se nada mudou
      */
-    public boolean substituirDados(DadosCobranca novosDados) {
+    public List<String> substituirDados(DadosCobranca novosDados) {
         exigirStatusAtiva();
         return aplicar(novosDados);
     }
 
-    /** Aplica uma revisão (PATCH /cob/{txid}). Cada revisão que altera algo soma 1 à revisão. */
-    public void revisar(RevisaoCobranca alteracoes) {
+    /**
+     * PATCH /cob/{txid}. A revisão só sobe se algo mudar.
+     *
+     * @return campos alterados; vazio se nada mudou
+     */
+    public List<String> revisar(RevisaoCobranca alteracoes) {
         exigirStatusAtiva();
         if (alteracoes.remover()) {
             if (alteracoes.alteraDados()) {
@@ -67,14 +68,22 @@ public class Cobranca {
             }
             status = StatusCobranca.REMOVIDA_PELO_USUARIO_RECEBEDOR;
             revisao++;
-            return;
+            return List.of("status");
         }
-        aplicar(new DadosCobranca(
+        return aplicar(new DadosCobranca(
                 requireNonNullElse(alteracoes.expiracao(), dados.expiracao()),
                 requireNonNullElse(alteracoes.valorOriginal(), dados.valorOriginal()),
                 requireNonNullElse(alteracoes.chave(), dados.chave()),
                 alteracoes.devedor() != null ? alteracoes.devedor() : dados.devedor(),
                 alteracoes.solicitacaoPagador() != null ? alteracoes.solicitacaoPagador() : dados.solicitacaoPagador()));
+    }
+
+    /** A cobrança como estava na revisão do registro (txid, criação e location nunca mudam). */
+    public Cobranca naRevisao(RegistroDeRevisao registro) {
+        if (!registro.txid().equals(txid)) {
+            throw new IllegalArgumentException("O registro de revisão pertence a outra cobrança.");
+        }
+        return new Cobranca(txid, criacao, location, pixCopiaECola, registro.revisao(), registro.status(), registro.dados());
     }
 
     public Instant expiraEm() {
@@ -85,13 +94,13 @@ public class Cobranca {
         return !agora.isBefore(expiraEm());
     }
 
-    private boolean aplicar(DadosCobranca novosDados) {
-        if (dados.equals(novosDados)) {
-            return false;
+    private List<String> aplicar(DadosCobranca novosDados) {
+        List<String> alterados = dados.camposAlteradosEm(novosDados);
+        if (!alterados.isEmpty()) {
+            dados = novosDados;
+            revisao++;
         }
-        dados = novosDados;
-        revisao++;
-        return true;
+        return alterados;
     }
 
     private void exigirStatusAtiva() {

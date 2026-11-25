@@ -1,11 +1,6 @@
 package io.github.henriteixeiranetto.cobrancas.shared.domain;
 
-/**
- * Violação de uma regra de negócio ou de formato detectada pelo domínio.
- *
- * <p>A {@code propriedade} indica o campo que causou o erro (por exemplo, {@code valor.original}),
- * o que permite à camada web responder no formato de erros da API Pix, com a lista de violações.
- */
+/** Regra violada no domínio. A propriedade (ex.: "valor.original") vai para as violações da resposta. */
 public class RegraDeNegocioException extends RuntimeException {
 
     private final String propriedade;

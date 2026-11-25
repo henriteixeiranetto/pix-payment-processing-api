@@ -3,13 +3,9 @@ package io.github.henriteixeiranetto.cobrancas.shared.domain;
 import java.util.regex.Pattern;
 
 /**
- * CNPJ com 14 caracteres, sem pontuação, e dígitos verificadores válidos.
- *
- * <p>Aceita o CNPJ alfanumérico (IN RFB nº 2.229/2024, emitido a partir de julho de 2026):
- * os 12 primeiros caracteres podem ser letras maiúsculas ou números e os 2 últimos
- * (dígitos verificadores) continuam numéricos. O cálculo é o mesmo módulo 11 de sempre,
- * usando como valor de cada caractere o seu código ASCII menos 48 ('0' = 0, 'A' = 17).
- * Assim, CNPJs numéricos antigos continuam válidos sem nenhum tratamento especial.
+ * CNPJ de 14 caracteres, numérico ou alfanumérico (IN RFB 2.229/2024): 12 posições [0-9A-Z]
+ * e 2 dígitos verificadores. No módulo 11 cada caractere vale o ASCII menos 48, então o mesmo
+ * cálculo serve para os dois formatos.
  */
 public record Cnpj(String numero) implements Documento {
 

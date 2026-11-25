@@ -7,10 +7,8 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Chave Pix (chave do DICT) do recebedor. O tipo é identificado pelo formato, seguindo a seção
- * "Formatação das chaves do DICT no BR Code" do Manual de Padrões para Iniciação do Pix.
- *
- * <p>Use {@link #de(String)} para criar uma chave a partir do texto recebido na API.
+ * Chave Pix do recebedor. O tipo sai do formato, conforme o Manual de Padrões para
+ * Iniciação do Pix ("Formatação das chaves do DICT no BR Code").
  */
 public record ChavePix(TipoChavePix tipo, String valor) {
 

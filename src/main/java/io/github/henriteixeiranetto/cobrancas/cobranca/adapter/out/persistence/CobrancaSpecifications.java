@@ -6,12 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
-/**
- * Monta a consulta de cobranças a partir dos filtros. Cada filtro opcional só entra
- * no WHERE quando foi informado.
- *
- * <p>O {@code _} (Java 22+) marca o parâmetro da consulta, que não é usado nestas condições.
- */
+/** Filtros do GET /cob: cada filtro opcional só entra no WHERE se foi informado. */
 final class CobrancaSpecifications {
 
     private CobrancaSpecifications() {
@@ -21,10 +16,10 @@ final class CobrancaSpecifications {
         List<Specification<CobrancaEntity>> condicoes = new ArrayList<>();
         condicoes.add((root, _, cb) -> cb.between(root.<Instant>get("criacao"), filtro.inicio(), filtro.fim()));
         if (filtro.cpf() != null) {
-            condicoes.add((root, _, cb) -> cb.equal(root.get("devedorCpf"), filtro.cpf()));
+            condicoes.add((root, _, cb) -> cb.equal(root.get("devedor").get("cpf"), filtro.cpf()));
         }
         if (filtro.cnpj() != null) {
-            condicoes.add((root, _, cb) -> cb.equal(root.get("devedorCnpj"), filtro.cnpj()));
+            condicoes.add((root, _, cb) -> cb.equal(root.get("devedor").get("cnpj"), filtro.cnpj()));
         }
         if (filtro.status() != null) {
             condicoes.add((root, _, cb) -> cb.equal(root.get("status"), filtro.status()));

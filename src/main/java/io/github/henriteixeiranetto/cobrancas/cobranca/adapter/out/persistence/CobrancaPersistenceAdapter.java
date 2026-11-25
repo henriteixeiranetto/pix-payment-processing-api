@@ -12,7 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
-/** Adaptador de saída: implementa a porta {@link CobrancaRepository} com Spring Data JPA. */
+/** Implementação JPA do {@link CobrancaRepository}. */
 @Repository
 class CobrancaPersistenceAdapter implements CobrancaRepository {
 
@@ -29,16 +29,13 @@ class CobrancaPersistenceAdapter implements CobrancaRepository {
         return jpa.findById(txid.valor()).map(CobrancaEntity::paraDominio);
     }
 
-    /**
-     * Dentro de uma transação, o {@code findById} devolve a mesma entidade já carregada antes
-     * (cache de primeiro nível do JPA). Ela é atualizada no lugar, e o {@code @Version} garante
-     * que uma alteração concorrente feita nesse meio-tempo seja detectada ao gravar.
-     */
+    // Atualiza a entidade já carregada na transação, assim o @Version pega alteração concorrente.
+    // saveAndFlush porque o histórico, gravado logo depois, tem FK para a cobrança.
     @Override
     public Cobranca salvar(Cobranca cobranca) {
         CobrancaEntity entidade = jpa.findById(cobranca.txid().valor()).orElseGet(CobrancaEntity::nova);
         entidade.copiarDe(cobranca);
-        return jpa.save(entidade).paraDominio();
+        return jpa.saveAndFlush(entidade).paraDominio();
     }
 
     @Override

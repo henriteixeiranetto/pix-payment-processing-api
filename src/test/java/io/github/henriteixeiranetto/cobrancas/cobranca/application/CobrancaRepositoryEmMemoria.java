@@ -12,10 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Implementação em memória da porta {@link CobrancaRepository}. Graças à arquitetura hexagonal,
- * o serviço pode ser testado sem banco de dados, sem Spring e sem mocks.
- */
+/** Repositório em memória para testar o serviço sem banco. */
 class CobrancaRepositoryEmMemoria implements CobrancaRepository {
 
     private final Map<Txid, Cobranca> cobrancas = new LinkedHashMap<>();

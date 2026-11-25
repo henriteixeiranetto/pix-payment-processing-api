@@ -99,8 +99,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <!-- Falha logo no início, com uma mensagem clara, se o build rodar num JDK antigo
-                 (sem isso, o erro aparece só na compilação e é bem menos claro). -->
+            <!-- Falha cedo, com mensagem clara, se o JDK for mais antigo que o do projeto -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
@@ -121,8 +120,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Carrega o Mockito como agente Java nos testes, como recomendado a partir do JDK 21
-                 (evita o aviso de "self-attaching" e continuará funcionando em JDKs futuros). -->
+            <!-- Mockito como agente Java nos testes (evita o aviso de self-attaching do JDK 21+) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>

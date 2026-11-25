@@ -10,7 +10,7 @@ class BrCodeTest {
 
     @Test
     void crc16ConfereComOVetorDeTestePadrao() {
-        // "123456789" é o valor de referência usado para validar implementações de CRC
+        // vetor de teste padrão do CRC16
         assertThat(Crc16.calcular("123456789")).isEqualTo("29B1");
     }
 

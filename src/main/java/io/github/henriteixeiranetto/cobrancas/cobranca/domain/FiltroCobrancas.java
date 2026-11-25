@@ -4,10 +4,7 @@ import io.github.henriteixeiranetto.cobrancas.shared.domain.ConsultaInvalidaExce
 import java.time.Instant;
 import java.util.regex.Pattern;
 
-/**
- * Filtros da consulta de cobranças (GET /cob). O período de criação é obrigatório;
- * os demais filtros são opcionais.
- */
+/** Filtros do GET /cob. O período é obrigatório; o resto é opcional. */
 public record FiltroCobrancas(Instant inicio, Instant fim, String cpf, String cnpj, StatusCobranca status) {
 
     private static final Pattern CPF = Pattern.compile("\\d{11}");

@@ -2,11 +2,7 @@ package io.github.henriteixeiranetto.cobrancas.pix.brcode;
 
 import java.nio.charset.StandardCharsets;
 
-/**
- * CRC16-CCITT-FALSE (polinômio 0x1021, valor inicial 0xFFFF), o código de verificação
- * exigido no campo 63 do BR Code. Ele permite que o aplicativo do pagador detecte
- * se o código foi lido ou colado com algum erro.
- */
+/** CRC16-CCITT-FALSE (polinômio 0x1021, início 0xFFFF), exigido no campo 63 do BR Code. */
 final class Crc16 {
 
     private static final int POLINOMIO = 0x1021;

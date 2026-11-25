@@ -8,12 +8,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Configurações do Pix lidas do application.yml (prefixo {@code pix}).
- * São validadas na inicialização: com um valor inválido a aplicação nem sobe.
+ * Propriedades pix.* do application.yml, validadas na subida.
  *
- * @param recebedor    dados do recebedor exibidos no BR Code
- * @param locationBase endereço base do payload; o location final (base + "/" + 32 caracteres)
- *                     deve ter no máximo 77 caracteres, por isso a base tem no máximo 44
+ * @param locationBase até 44 caracteres: com "/" e o id de 32, o location fica no limite de 77 da API
  */
 @Validated
 @ConfigurationProperties(prefix = "pix")
@@ -21,7 +18,7 @@ public record PixProperties(
         @Valid @NotNull Recebedor recebedor,
         @NotBlank @Size(max = 44) String locationBase) {
 
-    /** Os limites de tamanho vêm do BR Code: nome com até 25 e cidade com até 15 caracteres. */
+    /** Limites do BR Code: nome até 25, cidade até 15. */
     public record Recebedor(
             @NotBlank @Size(max = 25) String nome,
             @NotBlank @Size(max = 15) String cidade) {

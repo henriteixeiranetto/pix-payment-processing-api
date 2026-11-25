@@ -6,10 +6,7 @@ import io.github.henriteixeiranetto.cobrancas.shared.domain.Documento;
 import io.github.henriteixeiranetto.cobrancas.shared.domain.RegraDeNegocioException;
 import java.util.Objects;
 
-/**
- * Pessoa ou empresa a quem a cobrança é endereçada. Não é necessariamente quem vai pagar:
- * outra pessoa pode quitar a cobrança.
- */
+/** A quem a cobrança é endereçada (não necessariamente quem paga). */
 public record Devedor(Documento documento, String nome) {
 
     public static final int TAMANHO_MAXIMO_NOME = 200;

@@ -2,10 +2,7 @@ package io.github.henriteixeiranetto.cobrancas;
 
 import org.springframework.boot.SpringApplication;
 
-/**
- * Roda a aplicação localmente com um PostgreSQL criado pelo Testcontainers (precisa do Docker).
- * Útil para desenvolver sem configurar banco: execute este main pela IDE.
- */
+/** Sobe a aplicação com um PostgreSQL do Testcontainers (precisa de Docker). Para rodar pela IDE. */
 public class TestPixPaymentProcessingApiApplication {
 
     public static void main(String[] args) {

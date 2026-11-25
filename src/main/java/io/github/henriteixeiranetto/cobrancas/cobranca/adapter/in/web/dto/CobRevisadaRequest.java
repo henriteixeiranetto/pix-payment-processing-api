@@ -5,10 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Corpo de PATCH /cob/{txid} (schema "CobRevisada" da API Pix). Todos os campos são opcionais.
- * O único status aceito é REMOVIDA_PELO_USUARIO_RECEBEDOR, usado para cancelar a cobrança.
- */
+/** Corpo do PATCH /cob/{txid} (schema "CobRevisada"). Campo ausente não muda. */
 @Schema(name = "CobRevisada", description = "Alterações em uma cobrança ATIVA: envie só os campos que mudam. "
         + "Para cancelar, envie apenas o status REMOVIDA_PELO_USUARIO_RECEBEDOR.", example = """
         {

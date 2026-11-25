@@ -6,17 +6,21 @@ import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobRev
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobSolicitadaRequest;
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobsConsultadasResponse;
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.DevedorDto;
+import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.HistoricoRevisoesResponse;
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.ValorDto;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.Cobranca;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.DadosCobranca;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.Devedor;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.FiltroCobrancas;
+import io.github.henriteixeiranetto.cobrancas.cobranca.domain.RegistroDeRevisao;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.RevisaoCobranca;
+import io.github.henriteixeiranetto.cobrancas.cobranca.domain.Txid;
 import io.github.henriteixeiranetto.cobrancas.pix.ChavePix;
 import io.github.henriteixeiranetto.cobrancas.shared.domain.Cnpj;
 import io.github.henriteixeiranetto.cobrancas.shared.domain.Cpf;
 import io.github.henriteixeiranetto.cobrancas.shared.domain.Pagina;
 import java.math.BigDecimal;
+import java.util.List;
 
 /** Converte entre o JSON da API (DTOs) e os objetos de domínio. */
 final class CobrancaWebMapper {
@@ -70,6 +74,13 @@ final class CobrancaWebMapper {
         return new CobsConsultadasResponse(parametros, pagina.map(CobrancaWebMapper::paraResposta).itens());
     }
 
+    static HistoricoRevisoesResponse paraHistorico(Txid txid, List<RegistroDeRevisao> registros) {
+        var revisoes = registros.stream()
+                .map(r -> new HistoricoRevisoesResponse.Revisao(r.revisao(), r.registradaEm(), r.status(), r.camposAlterados()))
+                .toList();
+        return new HistoricoRevisoesResponse(txid.valor(), revisoes);
+    }
+
     private static Devedor paraDevedor(DevedorDto dto) {
         return dto == null ? null : Devedor.de(dto.cpf(), dto.cnpj(), dto.nome());
     }
@@ -78,7 +89,6 @@ final class CobrancaWebMapper {
         if (devedor == null) {
             return null;
         }
-        // switch com pattern matching (Java 21): como Documento é sealed, não precisa de "default"
         return switch (devedor.documento()) {
             case Cpf cpf -> new DevedorDto(cpf.numero(), null, devedor.nome());
             case Cnpj cnpj -> new DevedorDto(null, cnpj.numero(), devedor.nome());

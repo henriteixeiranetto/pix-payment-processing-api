@@ -4,6 +4,7 @@ import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobGer
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobRevisadaRequest;
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobSolicitadaRequest;
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobsConsultadasResponse;
+import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.HistoricoRevisoesResponse;
 import io.github.henriteixeiranetto.cobrancas.cobranca.application.CobrancaService;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.Cobranca;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.FiltroCobrancas;
@@ -24,10 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Endpoints de cobrança imediata, com os mesmos caminhos e formatos da API Pix (/cob).
- * A documentação OpenAPI de cada endpoint está em {@link CobrancaApi}.
- */
+/** Endpoints /cob, nos mesmos caminhos e formatos da API Pix. Documentação em {@link CobrancaApi}. */
 @RestController
 @RequestMapping("/cob")
 public class CobrancaController implements CobrancaApi {
@@ -59,8 +57,17 @@ public class CobrancaController implements CobrancaApi {
 
     @Override
     @GetMapping("/{txid}")
-    public CobGeradaResponse consultar(@PathVariable String txid) {
-        return CobrancaWebMapper.paraResposta(service.consultar(new Txid(txid)));
+    public CobGeradaResponse consultar(@PathVariable String txid, @RequestParam(required = false) Integer revisao) {
+        Txid id = new Txid(txid);
+        Cobranca cobranca = revisao == null ? service.consultar(id) : service.consultar(id, revisao);
+        return CobrancaWebMapper.paraResposta(cobranca);
+    }
+
+    @Override
+    @GetMapping("/{txid}/revisoes")
+    public HistoricoRevisoesResponse listarRevisoes(@PathVariable String txid) {
+        Txid id = new Txid(txid);
+        return CobrancaWebMapper.paraHistorico(id, service.listarRevisoes(id));
     }
 
     @Override

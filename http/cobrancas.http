@@ -45,6 +45,12 @@ Content-Type: application/json
 
 { "status": "REMOVIDA_PELO_USUARIO_RECEBEDOR" }
 
+### Consultar a cobrança como ela era na revisão 0, antes das alterações
+GET {{base}}/cob/{{txid}}?revisao=0
+
+### Histórico de revisões: quando cada uma foi registrada e o que mudou
+GET {{base}}/cob/{{txid}}/revisoes
+
 ### Listar cobranças criadas em um período (filtros opcionais: cpf, cnpj, status)
 GET {{base}}/cob?inicio=2026-01-01T00:00:00Z&fim=2026-12-31T23:59:59Z&paginacao.itensPorPagina=10
 

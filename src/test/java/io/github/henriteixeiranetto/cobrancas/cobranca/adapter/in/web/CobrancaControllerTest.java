@@ -21,10 +21,13 @@ import io.github.henriteixeiranetto.cobrancas.cobranca.application.CobrancaServi
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.Cobranca;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.CobrancaNaoEncontradaException;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.DadosCobranca;
+import io.github.henriteixeiranetto.cobrancas.cobranca.domain.RegistroDeRevisao;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.RevisaoCobranca;
+import io.github.henriteixeiranetto.cobrancas.cobranca.domain.StatusCobranca;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.Txid;
 import io.github.henriteixeiranetto.cobrancas.pix.ChavePix;
 import io.github.henriteixeiranetto.cobrancas.pix.brcode.BrCode;
+import io.github.henriteixeiranetto.cobrancas.shared.domain.ConsultaInvalidaException;
 import io.github.henriteixeiranetto.cobrancas.shared.domain.Pagina;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -37,10 +40,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Testa só a camada HTTP: formato do JSON, códigos de status e respostas de erro.
- * O serviço é substituído por um mock.
- */
+/** Só a camada HTTP (JSON, status e erros), com o serviço mockado. */
 @WebMvcTest(CobrancaController.class)
 class CobrancaControllerTest {
 
@@ -203,6 +203,45 @@ class CobrancaControllerTest {
                 .andExpect(jsonPath("$.parametros.paginacao.quantidadeDePaginas").value(1))
                 .andExpect(jsonPath("$.parametros.paginacao.quantidadeTotalDeItens").value(1))
                 .andExpect(jsonPath("$.cobs[0].txid").value(TXID));
+    }
+
+    @Test
+    void consultarComRevisaoBuscaARevisaoPedida() throws Exception {
+        given(service.consultar(new Txid(TXID), 0)).willReturn(cobranca(dados()));
+
+        mockMvc.perform(get("/cob/{txid}", TXID).param("revisao", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.txid").value(TXID));
+        then(service).should().consultar(new Txid(TXID), 0);
+    }
+
+    @Test
+    void revisaoInexistenteGeraConsultaInvalida() throws Exception {
+        given(service.consultar(new Txid(TXID), 9)).willThrow(new ConsultaInvalidaException("revisao",
+                "O parâmetro revisao corresponde a uma revisão inexistente para esta cobrança."));
+
+        mockMvc.perform(get("/cob/{txid}", TXID).param("revisao", "9"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value(TIPOS_DE_ERRO + "CobConsultaInvalida"))
+                .andExpect(jsonPath("$.violacoes[0].propriedade").value("revisao"));
+    }
+
+    @Test
+    void historicoDevolveAsRevisoesComOsCamposAlterados() throws Exception {
+        Cobranca atual = cobranca(dados());
+        given(service.listarRevisoes(new Txid(TXID))).willReturn(List.of(
+                RegistroDeRevisao.de(atual, List.of(), CRIACAO),
+                new RegistroDeRevisao(new Txid(TXID), 1, CRIACAO.plusSeconds(60), StatusCobranca.ATIVA,
+                        dados(), List.of("valor.original"))));
+
+        mockMvc.perform(get("/cob/{txid}/revisoes", TXID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.txid").value(TXID))
+                .andExpect(jsonPath("$.revisoes.length()").value(2))
+                .andExpect(jsonPath("$.revisoes[0].camposAlterados.length()").value(0))
+                .andExpect(jsonPath("$.revisoes[1].revisao").value(1))
+                .andExpect(jsonPath("$.revisoes[1].registradaEm").value("2026-11-06T12:01:00Z"))
+                .andExpect(jsonPath("$.revisoes[1].camposAlterados[0]").value("valor.original"));
     }
 
     private static DadosCobranca dados() {

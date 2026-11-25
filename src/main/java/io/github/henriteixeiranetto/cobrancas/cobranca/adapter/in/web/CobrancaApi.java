@@ -4,6 +4,7 @@ import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobGer
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobRevisadaRequest;
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobSolicitadaRequest;
 import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.CobsConsultadasResponse;
+import io.github.henriteixeiranetto.cobrancas.cobranca.adapter.in.web.dto.HistoricoRevisoesResponse;
 import io.github.henriteixeiranetto.cobrancas.cobranca.domain.StatusCobranca;
 import io.github.henriteixeiranetto.cobrancas.shared.web.Problema;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,12 +17,7 @@ import java.time.Instant;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-/**
- * Contrato documentado (OpenAPI/Swagger) dos endpoints de cobrança imediata.
- *
- * <p>As anotações de documentação ficam nesta interface para que o {@link CobrancaController}
- * contenha só o código que atende as requisições.
- */
+/** Documentação OpenAPI dos endpoints /cob, separada para o controller ficar só com o código. */
 @Tag(name = "Cob", description = "Cobranças imediatas")
 public interface CobrancaApi {
 
@@ -52,14 +48,29 @@ public interface CobrancaApi {
             content = @Content(mediaType = PROBLEMA_JSON, schema = @Schema(implementation = Problema.class)))
     ResponseEntity<CobGeradaResponse> criar(CobSolicitadaRequest request);
 
-    @Operation(summary = "Consultar cobrança imediata")
+    @Operation(summary = "Consultar cobrança imediata",
+            description = "Com o parâmetro revisao, devolve a cobrança como ela era naquela revisão.")
     @ApiResponse(responseCode = "200", description = "Dados da cobrança.",
             content = @Content(mediaType = JSON, schema = @Schema(implementation = CobGeradaResponse.class)))
+    @ApiResponse(responseCode = "400", description = "O txid não tem de 26 a 35 letras ou números, ou a revisão não existe.",
+            content = @Content(mediaType = PROBLEMA_JSON, schema = @Schema(implementation = Problema.class)))
+    @ApiResponse(responseCode = "404", description = "Não existe cobrança com esse txid.",
+            content = @Content(mediaType = PROBLEMA_JSON, schema = @Schema(implementation = Problema.class)))
+    CobGeradaResponse consultar(
+            @Parameter(description = DESCRICAO_TXID, example = EXEMPLO_TXID) String txid,
+            @Parameter(description = "Revisão desejada (a 0 é a criação). Se omitida, devolve a revisão atual.")
+            Integer revisao);
+
+    @Operation(summary = "Consultar o histórico de revisões da cobrança",
+            description = "Mostra quando cada revisão foi registrada e quais campos mudaram. "
+                    + "É uma extensão deste projeto: não faz parte da API Pix oficial.")
+    @ApiResponse(responseCode = "200", description = "Histórico da cobrança, da revisão 0 até a atual.",
+            content = @Content(mediaType = JSON, schema = @Schema(implementation = HistoricoRevisoesResponse.class)))
     @ApiResponse(responseCode = "400", description = "O txid não tem de 26 a 35 letras ou números.",
             content = @Content(mediaType = PROBLEMA_JSON, schema = @Schema(implementation = Problema.class)))
     @ApiResponse(responseCode = "404", description = "Não existe cobrança com esse txid.",
             content = @Content(mediaType = PROBLEMA_JSON, schema = @Schema(implementation = Problema.class)))
-    CobGeradaResponse consultar(@Parameter(description = DESCRICAO_TXID, example = EXEMPLO_TXID) String txid);
+    HistoricoRevisoesResponse listarRevisoes(@Parameter(description = DESCRICAO_TXID, example = EXEMPLO_TXID) String txid);
 
     @Operation(summary = "Revisar cobrança imediata",
             description = "Altera campos de uma cobrança ATIVA ou a cancela com status REMOVIDA_PELO_USUARIO_RECEBEDOR.")

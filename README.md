@@ -14,6 +14,7 @@ status e tipos de erro. Quem conhece a API Pix de um banco consegue usar esta AP
 - **Pix Copia e Cola (BR Code)** gerado para cada cobrança, no padrão EMV com CRC16
 - **Consultar** (`GET /cob/{txid}`) e **listar** por período, CPF/CNPJ e status, com paginação (`GET /cob`)
 - **Revisar** valor, prazo, devedor ou mensagem e **cancelar** a cobrança (`PATCH /cob/{txid}`), com controle de revisão
+- **Auditoria**: cada revisão fica guardada, então dá para ver a cobrança como ela era em qualquer revisão (`GET /cob/{txid}?revisao=N`) e o que mudou em cada uma (`GET /cob/{txid}/revisoes`)
 - **Validações de domínio**: CPF, CNPJ (inclusive o novo CNPJ alfanumérico), chave Pix (CPF, CNPJ, e-mail, telefone, EVP), txid e valores monetários
 - **Erros padronizados** (RFC 9457, `application/problem+json`) com a lista de violações da API Pix
 - Documentação interativa com **Swagger UI**, com todos os códigos de resposta e exemplos prontos para testar
@@ -21,7 +22,7 @@ status e tipos de erro. Quem conhece a API Pix de um banco consegue usar esta AP
 ## Roadmap
 
 - [x] **Etapa 1: cobranças imediatas.** API `/cob`, BR Code, PostgreSQL + Flyway, testes e CI
-- [ ] **Etapa 2: auditoria.** Histórico de cada revisão da cobrança (o que mudou e quando), consultável em `GET /cob/{txid}?revisao=N`, como exige a API Pix
+- [x] **Etapa 2: auditoria.** Histórico de cada revisão da cobrança (o que mudou e quando), consultável em `GET /cob/{txid}?revisao=N`, como exige a API Pix
 - [ ] **Etapa 3: pagamentos simulados.** "Pagar" uma cobrança pelo Pix Copia e Cola, gerar o Pix recebido (`endToEndId`), marcar a cobrança como `CONCLUIDA` e consultar em `GET /pix`. O banco de quem paga entra como integração externa simulada (porta com adaptador mock), testada com WireMock inclusive em falhas: timeout, retentativa e idempotência (cada `endToEndId` é processado uma única vez)
 - [ ] **Etapa 4: conciliação financeira.** Cruzar cobranças com Pix recebidos e apontar divergências (pago a maior ou a menor, pago após expirar, pagamento sem cobrança, cobrança vencida sem pagamento)
 - [ ] **Etapa 5: segurança.** OAuth2 *client credentials* com os escopos da API Pix (`cob.write`, `cob.read`, `pix.read`) usando Spring Security; a auditoria passa a registrar também quem fez cada alteração
@@ -150,6 +151,8 @@ Erro de validação, `400 Bad Request` (`application/problem+json`):
 | CNPJ alfanumérico | Formato em vigor desde julho de 2026 (IN RFB nº 2.229/2024), já adotado pela API Pix. O mesmo cálculo de dígitos atende CNPJs antigos e novos. |
 | Dinheiro em `BigDecimal` e como texto no JSON | Evita erros de arredondamento de ponto flutuante; o formato `"123.45"` é o da API Pix. |
 | Lock otimista (`@Version`) | Duas alterações simultâneas na mesma cobrança: a segunda recebe `409 Conflict` em vez de sobrescrever a primeira sem perceber. |
+| Histórico gravado na mesma transação | A revisão da cobrança e o registro no histórico são gravados juntos: se um falhar, nenhum dos dois fica. A restrição `UNIQUE (txid, revisao)` impede duas revisões com o mesmo número. |
+| Fotografia completa a cada revisão | Cada linha do histórico guarda o estado inteiro da cobrança, e não só a diferença. Consultar uma revisão antiga é uma leitura direta, sem remontar alterações. |
 | Flyway + `ddl-auto: validate` | O schema é versionado em SQL; o Hibernate só confere, na subida, se as entidades batem com o banco. |
 | `Clock` injetável | Data e hora controladas nos testes, sem depender do relógio da máquina. |
 | Java 25 com virtual threads | É o LTS atual. Cada requisição roda em uma virtual thread e, desde o Java 24 (JEP 491), elas não ficam presas em blocos `synchronized`: a API atende muitas requisições que esperam banco e rede sem precisar de um pool grande de threads. O limite de acessos simultâneos ao banco continua sendo o pool de conexões. |
@@ -177,9 +180,12 @@ Este projeto simula o lado do PSP recebedor (a instituição que emite a cobran�
 
 - autenticação mTLS + OAuth2 (prevista na etapa 5);
 - publicação do payload no `location` (assinado com JWS na API real), então o QR Code não é lido por aplicativos de banco;
-- histórico de revisões (`GET /cob/{txid}?revisao=N`), previsto na etapa 2;
+- o registro de **quem** fez cada alteração no histórico, que depende da autenticação (etapa 5);
 - os campos `infoAdicionais`, `loc`, `valor.modalidadeAlteracao`, `retirada` (Pix Saque/Troco) e `tributo`;
 - remover um campo opcional via `PATCH` (por exemplo, apagar o devedor).
+
+Por outro lado, o endpoint `GET /cob/{txid}/revisoes` é uma extensão deste projeto: ele não existe na API Pix
+oficial e serve para visualizar a auditoria de forma direta.
 
 ## Autor
 

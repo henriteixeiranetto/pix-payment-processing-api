@@ -25,10 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * Teste de ponta a ponta: HTTP → controller → serviço → JPA → PostgreSQL real (via Testcontainers),
- * incluindo as migrações do Flyway. Sem Docker disponível, estes testes são pulados.
- */
+/** Ponta a ponta contra PostgreSQL real (Testcontainers), com as migrações do Flyway. Sem Docker, são pulados. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -82,8 +79,7 @@ class CobrancaApiIntegrationTest {
 
     @Test
     void consultaFiltraPorPeriodoECpfComPaginacao() throws Exception {
-        // A criação é gravada em milissegundos; truncar o início evita perder uma cobrança
-        // criada no mesmo milissegundo em que o teste começou.
+        // a criação é gravada em ms; sem truncar, uma cobrança do mesmo ms ficaria fora do filtro
         Instant inicio = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         String cpf = "52998224725"; // CPF usado só neste teste
         criarComPut(Txid.gerar().valor(), cpf, "10.00").andExpect(status().isCreated());
@@ -97,10 +93,50 @@ class CobrancaApiIntegrationTest {
 
         assertThat(primeiraPagina).hasSize(2);
         assertThat(segundaPagina).hasSize(1);
-        // Juntas, as páginas trazem as três cobranças do CPF, sem repetir nem perder nenhuma.
-        // A ordem exata não é verificada: cobranças criadas no mesmo milissegundo são desempatadas pelo txid.
+        // as duas páginas juntas têm as três, sem repetir; a ordem não é conferida porque
+        // cobranças do mesmo ms são desempatadas pelo txid
         assertThat(Stream.concat(primeiraPagina.stream(), segundaPagina.stream()))
                 .containsExactlyInAnyOrder("10.00", "20.00", "30.00");
+    }
+
+    @Test
+    void historicoPermiteConsultarCadaRevisao() throws Exception {
+        String txid = Txid.gerar().valor();
+        criarComPut(txid, "12345678909", "150.00").andExpect(status().isCreated());
+        revisar(txid, """
+                { "valor": { "original": "120.00" } }
+                """).andExpect(status().isOk());
+        revisar(txid, """
+                { "solicitacaoPagador": "Desconto aplicado." }
+                """).andExpect(status().isOk());
+        revisar(txid, """
+                { "status": "REMOVIDA_PELO_USUARIO_RECEBEDOR" }
+                """).andExpect(status().isOk());
+
+        // revisão 0, lida do histórico
+        mockMvc.perform(get("/cob/{txid}", txid).param("revisao", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.revisao").value(0))
+                .andExpect(jsonPath("$.status").value("ATIVA"))
+                .andExpect(jsonPath("$.valor.original").value("150.00"));
+
+        mockMvc.perform(get("/cob/{txid}", txid).param("revisao", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valor.original").value("120.00"))
+                .andExpect(jsonPath("$.solicitacaoPagador").doesNotExist());
+
+        mockMvc.perform(get("/cob/{txid}", txid).param("revisao", "9"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violacoes[0].propriedade").value("revisao"));
+
+        mockMvc.perform(get("/cob/{txid}/revisoes", txid))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.revisoes.length()").value(4))
+                .andExpect(jsonPath("$.revisoes[0].camposAlterados.length()").value(0))
+                .andExpect(jsonPath("$.revisoes[1].camposAlterados[0]").value("valor.original"))
+                .andExpect(jsonPath("$.revisoes[2].camposAlterados[0]").value("solicitacaoPagador"))
+                .andExpect(jsonPath("$.revisoes[3].status").value("REMOVIDA_PELO_USUARIO_RECEBEDOR"))
+                .andExpect(jsonPath("$.revisoes[3].camposAlterados[0]").value("status"));
     }
 
     @Test
@@ -116,6 +152,7 @@ class CobrancaApiIntegrationTest {
                 .andExpect(jsonPath("$.paths['/cob'].post.responses['201']").exists())
                 .andExpect(jsonPath("$.paths['/cob'].post.responses['200']").doesNotExist())
                 .andExpect(jsonPath("$.paths['/cob'].get.responses['400']").exists())
+                .andExpect(jsonPath("$.paths['/cob/{txid}/revisoes'].get.responses['200']").exists())
                 // Exemplos que o Swagger já deixa preenchidos no "Try it out"
                 .andExpect(jsonPath("$.paths['/cob/{txid}'].put.parameters[0].example").value("pedido20261106000000000000001"))
                 .andExpect(jsonPath("$.components.schemas.CobSolicitada.example.valor.original").value("150.00"));

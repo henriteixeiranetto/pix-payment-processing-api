@@ -1,5 +1,4 @@
--- Auditoria: uma linha por revisão de cada cobrança, com o estado completo naquela revisão.
--- Permite consultar a cobrança como ela era (GET /cob/{txid}?revisao=N), como exige a API Pix.
+-- Histórico de revisões da cobrança, para o GET /cob/{txid}?revisao=N
 CREATE TABLE cobranca_revisao (
     id                  BIGINT GENERATED ALWAYS AS IDENTITY,
     txid                VARCHAR(35)    NOT NULL,
@@ -13,17 +12,14 @@ CREATE TABLE cobranca_revisao (
     devedor_cnpj        VARCHAR(14),
     devedor_nome        VARCHAR(200),
     solicitacao_pagador VARCHAR(140),
-    -- Campos que mudaram em relação à revisão anterior, separados por vírgula (vazio na criação)
-    campos_alterados    VARCHAR(300)   NOT NULL,
+    campos_alterados    VARCHAR(300)   NOT NULL, -- separados por vírgula; vazio na revisão 0
 
     CONSTRAINT pk_cobranca_revisao PRIMARY KEY (id),
-    -- Também serve de índice para as consultas por txid e revisão
-    CONSTRAINT uk_cobranca_revisao_txid_revisao UNIQUE (txid, revisao),
+    CONSTRAINT uk_cobranca_revisao_txid_revisao UNIQUE (txid, revisao), -- também serve de índice
     CONSTRAINT fk_cobranca_revisao_cobranca FOREIGN KEY (txid) REFERENCES cobranca (txid)
 );
 
--- Cobranças criadas antes desta migração: registra o estado atual de cada uma.
--- As revisões anteriores não foram guardadas e, por isso, não podem ser recuperadas.
+-- Cobranças que já existiam entram só com o estado atual; as revisões de antes não foram guardadas
 INSERT INTO cobranca_revisao (txid, revisao, registrada_em, status, expiracao_segundos, valor_original, chave,
                               devedor_cpf, devedor_cnpj, devedor_nome, solicitacao_pagador, campos_alterados)
 SELECT txid, revisao, CASE WHEN revisao = 0 THEN criacao ELSE now() END, status, expiracao_segundos,

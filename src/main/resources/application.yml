@@ -5,8 +5,7 @@ spring:
     virtual:
       # requisições em virtual threads (sem pinning em synchronized desde o Java 24, JEP 491)
       enabled: true
-  # Valores para desenvolvimento local. Em outros ambientes, sobrescreva com as
-  # variáveis SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME e SPRING_DATASOURCE_PASSWORD.
+  # credenciais de desenvolvimento; em outro ambiente, use SPRING_DATASOURCE_*
   datasource:
     url: jdbc:postgresql://localhost:5432/cobrancas
     username: cobrancas
@@ -14,11 +13,11 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # O schema é criado pelo Flyway; o Hibernate só confere se as entidades batem com ele.
+      # o schema é do Flyway; o Hibernate só valida
       ddl-auto: validate
   docker:
     compose:
-      # Mantém o PostgreSQL rodando entre reinícios da aplicação.
+      # sobe o banco, mas não derruba quando a aplicação para
       lifecycle-management: start-only
 
 management:
@@ -31,7 +30,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
-# Dados usados para montar o "Pix Copia e Cola" (BR Code) de cada cobrança.
+# usados no Pix Copia e Cola de cada cobrança
 pix:
   recebedor:
     nome: Loja Exemplo LTDA

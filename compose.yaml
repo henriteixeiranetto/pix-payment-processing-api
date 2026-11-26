@@ -1,6 +1,4 @@
-# Banco de dados para desenvolvimento local.
-# Com o Docker aberto, "./mvnw spring-boot:run" sobe este serviço automaticamente
-# (módulo spring-boot-docker-compose). Também funciona com "docker compose up -d".
+# banco de desenvolvimento; o spring-boot:run sobe sozinho (ou docker compose up -d)
 services:
   postgres:
     image: postgres:17-alpine
